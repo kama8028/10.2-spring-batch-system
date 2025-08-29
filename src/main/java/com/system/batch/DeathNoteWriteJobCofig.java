@@ -34,11 +34,11 @@ public class DeathNoteWriteJobCofig {
   @Bean
   public Step deathNoteWriteStep(JobRepository jobRepository, 
                                   PlatformTransactionManager transactionManager, 
-                                  ListItemReader<DeathNote> deathNotedListReader,
+                                  ListItemReader<DeathNote> deathNoteListReader,
                                   FlatFileItemWriter<DeathNote> deathNoteWriter) {
     return new StepBuilder("deathNoteWriteStep", jobRepository)
         .<DeathNote, DeathNote>chunk(10, transactionManager)
-        .reader(deathNotedListReader)
+        .reader(deathNoteListReader)
         .writer(deathNoteWriter)
         .build();
   }
@@ -57,15 +57,28 @@ public class DeathNoteWriteJobCofig {
   @Bean
   @StepScope
   public FlatFileItemWriter<DeathNote> deathNoteWriter(@Value("#{jobParameters['outputDir']}") String outputDir) {
+    // return new FlatFileItemWriterBuilder<DeathNote>()
+    //   .name("deathNoteWriter")
+    //   .resource(new FileSystemResource(outputDir + "/death_notes.csv"))
+    //   .delimited()
+    //   .delimiter(",")
+    //   //.sourceType(DeathNote.class)  // 원하는 컬럼만 넣기 위해 sourceType과 names는 주석 처리
+    //   //.names("victimId", "victimName", "executionDate", "causeOfDeath")
+    //   //.fieldExtractor(fieldExtractor()) // 원하는 컬럼만 넣고 싶을때
+    //   .names("victimId","victimName","executionDate","causeOfDeath")
+    //   .headerCallback(writer -> writer.write("처형ID, 피해자명, 처형일자, 사인"))
+    //   .build();
+
     return new FlatFileItemWriterBuilder<DeathNote>()
       .name("deathNoteWriter")
-      .resource(new FileSystemResource(outputDir + "/death_notes.csv"))
-      .delimited()
-      .delimiter(",")
-      //.sourceType(DeathNote.class)  // 원하는 컬럼만 넣기 위해 sourceType과 names는 주석 처리
-      //.names("victimId", "victimName", "executionDate", "causeOfDeath")
-      .fieldExtractor(fieldExtractor()) // 원하는 컬럼만 넣고 싶을때
-      .headerCallback(writer -> writer.write("처형ID, 처형일자, 사인"))
+      .resource(new FileSystemResource(outputDir + "/death_note_report.txt"))
+      .formatted()
+      //.format("처형 ID: %s | 처형일자 : %s | 피해자: %s | 사인: %s")
+      .format("처형 ID: %s | 처형일자 : %s | 피해자: %s")
+      .sourceType(DeathNote.class)
+      .names("victimId","executionDate","victimName","causeOfDeath")
+      .headerCallback(writer -> writer.write("================ 처형 기록부 ========================="))
+      .footerCallback(writer -> writer.write("================ 처형 완료 ==========================="))
       .build();
   }
 
